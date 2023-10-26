@@ -1,4 +1,4 @@
-use music_store;
+USE music_store;
 
 /* Question Set 1 - Easy */
 
@@ -57,7 +57,8 @@ SELECT DISTINCT email,first_name, last_name
 FROM customer
 JOIN invoice ON customer.customer_id = invoice.customer_id
 JOIN invoice_line ON invoice.invoice_id = invoice_line.invoice_id
-WHERE track_id IN(
+WHERE track_id IN
+(
 	SELECT track_id FROM track
 	JOIN genre ON track.genre_id = genre.genre_id
 	WHERE genre.name LIKE 'Rock'
@@ -80,7 +81,8 @@ LIMIT 5;
 --     Return the Name and Milliseconds for each track. Order by the song length with the longest songs listed first?
 select name,milliseconds
 from track
-where milliseconds > (
+where milliseconds > 
+(
 	select avg(milliseconds) as avg_song_length
 	from track
 )
@@ -122,9 +124,9 @@ ORDER BY 5 DESC;
 /* Steps to Solve:  There are two parts in question- first most popular music genre and second need data at country level. */
 WITH popular_genre AS 
 (
-    SELECT COUNT(invoice_line.quantity) AS purchases, customer.country, genre.name, genre.genre_id,
-    ROW_NUMBER() OVER(PARTITION BY customer.country ORDER BY COUNT(invoice_line.quantity) DESC) AS RowNo
-    FROM invoice_line 
+        SELECT COUNT(invoice_line.quantity) AS purchases, customer.country, genre.name, genre.genre_id,
+        ROW_NUMBER() OVER(PARTITION BY customer.country ORDER BY COUNT(invoice_line.quantity) DESC) AS RowNo
+        FROM invoice_line 
 	JOIN invoice ON invoice.invoice_id = invoice_line.invoice_id
 	JOIN customer ON customer.customer_id = invoice.customer_id
 	JOIN track ON track.track_id = invoice_line.track_id
@@ -144,32 +146,35 @@ first find the most spent on music for each country and second filter the data f
 
 /* Method 1: using CTE */
 
-WITH Customter_with_country AS 
+WITH customter_with_country AS 
 (
-		SELECT customer.customer_id,first_name,last_name,billing_country,SUM(total) AS total_spending,
-	    ROW_NUMBER() OVER(PARTITION BY billing_country ORDER BY SUM(total) DESC) AS RowNo 
-		FROM invoice
-		JOIN customer ON customer.customer_id = invoice.customer_id
-		GROUP BY 1,2,3,4
-		ORDER BY 4 ASC,5 DESC
+	SELECT customer.customer_id,first_name,last_name,billing_country,SUM(total) AS total_spending,
+	ROW_NUMBER() OVER(PARTITION BY billing_country ORDER BY SUM(total) DESC) AS RowNo 
+	FROM invoice
+	JOIN customer ON customer.customer_id = invoice.customer_id
+	GROUP BY 1,2,3,4
+	ORDER BY 4 ASC,5 DESC
 )
-SELECT * FROM Customter_with_country WHERE RowNo <= 1
+SELECT * FROM customter_with_country WHERE RowNo <= 1
 
 
 /* Method 2: Using Recursive */
 
 WITH RECURSIVE 
-	customter_with_country AS (
+	customter_with_country AS 
+	(
 		SELECT customer.customer_id,first_name,last_name,billing_country,SUM(total) AS total_spending
 		FROM invoice
 		JOIN customer ON customer.customer_id = invoice.customer_id
 		GROUP BY 1,2,3,4
-		ORDER BY 2,3 DESC),
-
-	country_max_spending AS(
+		ORDER BY 2,3 DESC
+	),
+	country_max_spending AS
+	(
 		SELECT billing_country,MAX(total_spending) AS max_spending
 		FROM customter_with_country
-		GROUP BY billing_country)
+		GROUP BY billing_country
+	)
 
 SELECT cc.billing_country, cc.total_spending, cc.first_name, cc.last_name, cc.customer_id
 FROM customter_with_country cc
